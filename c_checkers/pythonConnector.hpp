@@ -3,6 +3,7 @@
 
 #include "minimax.hpp"
 #include <string>
+#include <cstring>
 
 // Export getOptimalContinuation, isWinning, and getOptimalWinLength for use in Python.
 extern "C" {

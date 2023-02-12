@@ -3,5 +3,5 @@
 /c_checkers/*
 !/c_checkers/*.cpp
 !/c_checkers/*.hpp
-
+/boards/
 

@@ -5,6 +5,7 @@
 #include <functional>
 #include <fstream>
 #include <chrono>
+#include <math.h>
 
 // TODO: Optimizations
 // Once a solution has been found, update the depth of the search to go no deeper than that first solution
