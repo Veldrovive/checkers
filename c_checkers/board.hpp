@@ -50,6 +50,12 @@ private:
     // Multi-jump moves require a recursive dfs that appends a list of all end states. Each step concatenates the current board to the end of the list and calls recursively with all valid moves.
     bool isJumpValid(int player, location loc, move m);  // Returns true if the piece belongs to the player, loc + m is an opposing piece (val * player < 0), and loc + 2*m is empty
     bool isMoveValid(int player, location loc, move m);  // Returns true if the piece belongs to the player, loc + m is empty, and loc + m is in bounds
+
+    // std::vector<float> weights = {10.0, 2.0, 1.0, 15.0, 5.0};
+    std::vector<float> redTurnRedWeights = {30.0, -30.0, 30.0, -30.0, -30.0};
+    std::vector<float> redTurnBlackWeights = {30.0, 30.0, -21.953517783634453, 30.0, 30.0};
+    std::vector<float> blackTurnRedWeights = {30.0, 11.227915419751112, 30.0, -30.0, 30.0};
+    std::vector<float> blackTurnBlackWeights = {16.42124258905689, -30.0, -30.0, -30.0, 30.0};
 public:
     void followMultiJump(std::vector<successor>& successors, int player, location loc, move m);
     Board* performJump(int player, location loc, move m);  // Returns a new board with the jump performed
@@ -64,8 +70,12 @@ public:
     
     void display();
 
+    // void setWeights(float w1, float w2, float w3, float w4, float w5);
+    // void setWeights(std::vector<float> weights);
+    void setWeights(std::vector<float> redWeights, std::vector<float> blackWeights, int player);
     int getTerminalValue();
-    float evaluate();
+    // float evaluate();
+    float evaluate(int player);
     float utility();
 
     std::vector<successor> getSuccessors(int player);

@@ -196,45 +196,6 @@ class SparseBoard(Board):
         3. Move pieces towards the center
         """
         return self.evaluate()
-        # Strategy 1
-        total_pieces = 0
-        red_pieces = 0
-        black_pieces = 0
-        for val in self.sparse_board.values():
-            if val > 0:
-                red_pieces += 1
-            elif val < 0:
-                black_pieces += 1
-            total_pieces += 1
-        piece_score = (red_pieces - black_pieces) / total_pieces
-        # Strategy 2
-        # For this, we take the average distance by adding up the x and y position for all pieces of the same color and then taking manhattan distance and dividing by the number of pieces and then by (board.width + board.height)
-        red_x = 0
-        red_y = 0
-        black_x = 0
-        black_y = 0
-        for (x, y), val in self.sparse_board.items():
-            if val > 0:
-                red_x += x
-                red_y += y
-            elif val < 0:
-                black_x += x
-                black_y += y
-        distance = (abs(red_x - black_x) + abs(red_y - black_y)) / (total_pieces * (self.width + self.height))
-        # Strategy 3
-        # For this, we take the average distance from the center of the board
-        red_x = 0
-        red_y = 0
-        for (x, y), val in self.sparse_board.items():
-            if val > 0:
-                red_x += x - self.width / 2
-                red_y += y - self.height / 2
-        center_distance = (abs(red_x) + abs(red_y)) / (red_pieces * (self.width + self.height))
-
-        weight_piece_score = 1
-        weight_distance = 1
-        weight_center_distance = 1
-        return weight_piece_score * piece_score + weight_distance * distance + weight_center_distance * center_distance
 
     def __hash__(self) -> int:
         # return hash(frozenset(self.sparse_board.items()))  # Collision: hash(frozenset({((4, 5), -1), ((5, 6), 1)})) == hash(frozenset({((4, 5), -2), ((5, 6), 1)}))

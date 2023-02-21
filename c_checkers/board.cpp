@@ -20,10 +20,15 @@ Board::Board(const Board& other) {  // Copy Constructor
     this->height = other.height;
     this->sparseBoard = other.sparseBoard;
     this->strRep = "";
+    this->redTurnRedWeights = other.redTurnRedWeights;
+    this->redTurnBlackWeights = other.redTurnBlackWeights;
+    this->blackTurnRedWeights = other.blackTurnRedWeights;
+    this->blackTurnBlackWeights = other.blackTurnBlackWeights;
 }
 
 Board::~Board() {
     // Destructor
+    sparseBoard.clear();
 }
 
 void Board::setRep() {
@@ -205,6 +210,9 @@ void Board::followMultiJump(std::vector<successor>& successors, int player, loca
     // If we get here and haven't found a jump, we are in a terminal state and we can add the board to the successors vector
     if (!foundJump) {
         successors.push_back({ newBoard, loc, m });
+    } else {
+        // If we found a jump, we need to delete the board because it will not be added to the successors vector
+        delete newBoard;
     }
 }
 
@@ -414,35 +422,147 @@ int Board::getTerminalValue() {
     }
 }
 
-float Board::evaluate() {
-    // Returns a value from -1 to 1 that represents how good the board is for red
-    // The value is calculated by subtracting the number of black pieces from the number of red pieces
-    int redCount = 0;
-    int blackCount = 0;
+void Board::setWeights(std::vector<float> redWeights, std::vector<float> blackWeights, int player) {
+    // Sets the weights of the evaluation function
+    if (redWeights.size() != this->redTurnRedWeights.size()) {
+        std::cout << "Error: Invalid number of weights" << std::endl;
+        exit(1);
+    }
+    if (player == 1) {
+        this->redTurnRedWeights = redWeights;
+        this->redTurnBlackWeights = blackWeights;
+    } else if (player == -1) {
+        this->blackTurnRedWeights = redWeights;
+        this->blackTurnBlackWeights = blackWeights;
+    } else {
+        std::cout << "Error: Invalid player" << std::endl;
+        exit(1);
+    }
+}
+
+float Board::evaluate(int player) {
+    // TODO: Change diagonals to depend on piece value so it is more relevant to the game
+    // Returns a value used to order the successors of a node to improve the efficiency of alpha-beta pruning
+    // Consists of a set of metrics
+    // 1. The total value of red pieces minus the total value of black pieces / the total number of pieces
+    // 2. -the distance of the red men to the king row / number of men
+    // 3. -the average distance of all men to the center of the board
+    // 4. The number of opposing pieces on the diagonal of each piece. Call these the diagonalThreats. Boards with more diagonalThreats are better
+    // 5. The number of opposing pieces two spaces away on the diagonal of each piece. Call these the doubleDiagonalThreats. Boards with more doubleDiagonalThreats are better
+    int redValue = 0;
+    int blackValue = 0;
+    int redPieces = 0;
+    int blackPieces = 0;
+    float centerX = width / 2.0;
+    float centerY = height / 2.0;
+    int redKingDistance = 0;
+    int blackKingDistance = 0;
+    float redCenterDistance = 0;
+    float blackCenterDistance = 0;
+    int redDiagonalThreats = 0;  // Number of black pieces on the diagonal to a red piece
+    int blackDiagonalThreats = 0;  // Number of red pieces on the diagonal to a black piece
+    int redDoubleDiagonalThreats = 0;  // Number of black pieces two spaces away on the diagonal to a red piece
+    int blackDoubleDiagonalThreats = 0;  // Number of red pieces two spaces away on the diagonal to a black piece
+
     for (auto it = sparseBoard.begin(); it != sparseBoard.end(); it++) {
         if (it->second > 0) {
-            redCount++;
+            redValue += it->second;
+            redPieces++;
+            if (it->second == 1) {
+                // The red king row is row 0 so the dist is just the y value
+                redKingDistance += it->first.y;
+            }
+            redCenterDistance += std::abs(it->first.x - centerX) + std::abs(it->first.y - centerY);
+            int numMoves = it->second == 2 ? 4 : 2;
+            move* moves = it->second == 2 ? kingMoves : redManMoves;
+            move* endMove = moves + numMoves;
+            for (move* m = moves; m != endMove; m++) {
+                location loc = {it->first.x + m->dx, it->first.y + m->dy};
+                if (sparseBoard.count(loc) > 0 && sparseBoard[loc] < 0) {
+                    redDiagonalThreats++;
+                }
+                loc = {it->first.x + 2 * m->dx, it->first.y + 2 * m->dy};
+                if (sparseBoard.count(loc) > 0 && sparseBoard[loc] < 0) {
+                    redDoubleDiagonalThreats++;
+                }
+            }
         } else if (it->second < 0) {
-            blackCount++;
+            blackValue += -it->second;
+            blackPieces++;
+            if (it->second == -1) {
+                // The black king row is row 7 so the dist is 7 - y
+                blackKingDistance += 7 - it->first.y;
+            }
+            blackCenterDistance += std::abs(it->first.x - centerX) + std::abs(it->first.y - centerY);
+            int numMoves = it->second == -2 ? 4 : 2;
+            move* moves = it->second == -2 ? kingMoves : blackManMoves;
+            move* endMove = moves + numMoves;
+            for (move* m = moves; m != endMove; m++) {
+                location loc = {it->first.x + m->dx, it->first.y + m->dy};
+                if (sparseBoard.count(loc) > 0 && sparseBoard[loc] > 0) {
+                    blackDiagonalThreats++;
+                }
+                loc = {it->first.x + 2 * m->dx, it->first.y + 2 * m->dy};
+                if (sparseBoard.count(loc) > 0 && sparseBoard[loc] > 0) {
+                    blackDoubleDiagonalThreats++;
+                }
+            }
         }
     }
-    return (float) (redCount - blackCount) / (redCount + blackCount);
+
+    float redMetric1 = (float) redValue / (redValue + blackValue);
+    float blackMetric1 = (float) blackValue / (redValue + blackValue);
+    float redMetric2 = redPieces == 0 ? 0 : -1.0 * (float) redKingDistance / redPieces;
+    float blackMetric2 = blackPieces == 0 ? 0 : 1.0 * (float) -1*blackKingDistance / blackPieces;
+    float redMetric3 = redPieces == 0 ? 0 : -1.0 * redCenterDistance / redPieces;
+    float blackMetric3 = blackPieces == 0 ? 0 : -1.0 * blackCenterDistance / blackPieces;
+    float redMetric4 = (float) redDiagonalThreats / (redPieces + blackPieces);
+    float blackMetric4 = (float) blackDiagonalThreats / (redPieces + blackPieces);
+    float redMetric5 = (float) redDoubleDiagonalThreats / (redPieces + blackPieces);
+    float blackMetric5 = (float) blackDoubleDiagonalThreats / (redPieces + blackPieces);
+
+    std::vector<float> redMetrics = {
+        redMetric1,
+        redMetric2,
+        redMetric3,
+        redMetric4,
+        redMetric5
+    };
+
+    std::vector<float> blackMetrics = {
+        blackMetric1,
+        blackMetric2,
+        blackMetric3,
+        blackMetric4,
+        blackMetric5
+    };
+
+    std::vector<float> redWeights = player == 1 ? redTurnRedWeights : blackTurnRedWeights;
+    std::vector<float> blackWeights = player == 1 ? redTurnBlackWeights : blackTurnBlackWeights;
+    // std::cout << redWeights[0] << " " << redWeights[1] << " " << redWeights[2] << " " << redWeights[3] << " " << redWeights[4] << " " << blackWeights[0] << " " << blackWeights[1] << " " << blackWeights[2] << " " << blackWeights[3] << " " << blackWeights[4] << std::endl;
+
+    float evaluation = 0;
+    for (int i = 0; i < redMetrics.size(); i++) {
+        evaluation += redWeights[i] * redMetrics[i] + blackWeights[i] * blackMetrics[i];
+    }
+
+    // In order for the depth to matter, we need to make sure that the evaluation is bounded by +-999
+    if (evaluation > 900) {
+        evaluation = 900;
+    } else if (evaluation < -900) {
+        evaluation = -900;
+    }
+    bool isNan = std::isnan(evaluation);
+    if (std::isnan(evaluation) || evaluation > 10e10 || evaluation < -10e10) {
+        std::cout << "Evaluation is nan or too big: " << evaluation << std::endl;
+        exit(1);
+    }
+    return evaluation;
 }
 
 float Board::utility() {
-    // Returns a value from -1 to 1 that represents how good the board is for red
-    // The value is calculated by subtracting the number of black pieces from the number of red
-    // pieces, and then dividing by the total number of pieces
-    int redCount = 0;
-    int blackCount = 0;
-    for (auto it = sparseBoard.begin(); it != sparseBoard.end(); it++) {
-        if (it->second > 0) {
-            redCount++;
-        } else if (it->second < 0) {
-            blackCount++;
-        }
-    }
-    return (float) (redCount - blackCount) / (redCount + blackCount);
+    // For now, we just return the evaluation
+    return evaluate(1);
 }
 
 std::string Board::toString() const {

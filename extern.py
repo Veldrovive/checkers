@@ -48,7 +48,7 @@ def getBoardOptimalContinuation(board: SparseBoard, maxDepth: int, maxTime: floa
 
 if __name__ == "__main__":
     import time
-    file = "./boards/d7_test.txt"
+    file = "./test_boards/d11_normal_1.txt"
     start_time = time.time()
     
     board = SparseBoard.read_from_file(file)

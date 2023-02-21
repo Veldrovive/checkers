@@ -3,5 +3,7 @@
 /c_checkers/*
 !/c_checkers/*.cpp
 !/c_checkers/*.hpp
+!/c_checkers/build.sh
+!/c_checkers/library_builder.py
 /boards/
 

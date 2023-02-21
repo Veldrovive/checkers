@@ -20,12 +20,14 @@ typedef struct transpositionValue {
     float value;
 } transpositionValue;
 
+
 typedef struct strategyKey {
     std::size_t boardHash;
     int player;
+    int remainingDepth;
 
     bool operator==(const strategyKey& other) const {
-        return boardHash == other.boardHash && player == other.player;
+        return boardHash == other.boardHash && player == other.player && remainingDepth == other.remainingDepth;
     }
 } strategyKey;
 
@@ -44,7 +46,7 @@ namespace std {
     };
     template <> struct hash<strategyKey> {
         std::size_t operator()(const strategyKey& key) const {
-            return key.boardHash ^ key.player;
+            return key.boardHash ^ key.player ^ key.remainingDepth;
         }
     };
 }
@@ -73,13 +75,13 @@ public:
     void setEndTime(std::chrono::time_point<std::chrono::high_resolution_clock> endTime);
     bool shouldExit();  // Returns true if the observer has been instructed to exit. This would usually be due to a timeout.
 
-    float evaluate(Board* board);  // Returns the computed evaluation. Stores the result in the evaluation cache.
+    float evaluate(Board* board, int player);  // Returns the computed evaluation. Stores the result in the evaluation cache.
     float utility(Board* board);  // Returns the computed utility. Stores the result in the utility cache.
     int getTerminalValue(Board* board);  // Returns 0 if the board is not terminal, 1 if red wins, -1 if black wins, and 2 if the game is a draw. Stores the result in the terminal cache.
     float getTranspositionValue(Board* board, int depth, int player);  // Returns the stored value if the board is in the transposition table and the depth is greater than or equal to the stored depth. Otherwise returns NAN.
     void storeTranspositionValue(Board* board, int depth, int player, float value);  // Stores the value in the transposition table.
 
-    void updateStrategy(Board* board, Board* nextBoard, int player, location piece, move move, float value);  // Updates the strategy map with the optimal continuation.
+    void updateStrategy(Board* board, Board* nextBoard, int player, location piece, move move, float value, int remainingDepth);  // Updates the strategy map with the optimal continuation.
     std::vector<Board*> recoverStrategy(Board* board);  // Recovers the optimal sequence of moves from the strategy map in the observer.
 
     void clearCaches();
@@ -89,7 +91,6 @@ public:
 
 typedef struct minimaxResult {
     float value;
-    Board* move;
     GameObserver* observer;
 } minimaxResult;
 
