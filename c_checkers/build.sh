@@ -8,5 +8,5 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 else
     # Linux
     echo "Linux"
-    g++ -shared -fPIC --std=c++17 -o libcheckers.so pythonConnector.cpp minimax.cpp board.cpp
+    g++ -shared -fPIC --std=c++17 -fpermissive -o libcheckers.so pythonConnector.cpp minimax.cpp board.cpp
 fi

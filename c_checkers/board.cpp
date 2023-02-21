@@ -4,6 +4,7 @@
 #include <fstream>
 #include <functional>
 #include <algorithm>
+#include <math.h>
 
 move redManMoves[2] = {{-1, -1}, {1, -1}};
 move blackManMoves[2] = {{-1, 1}, {1, 1}};
