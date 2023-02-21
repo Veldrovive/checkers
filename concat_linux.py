@@ -2776,29 +2776,11 @@ N$H#gz)r_6<!G=u+qbWi*9w-U~OYCb%-!haqw++W-ewr}Fs($1f^fS)%nC?7vje$ImX2LxO@{~(L\
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 def with_lib():
-    # Returns a ctypes.CDLL containing the library
-    # This file has the shared library embedded in it in base64 format
-    # Check the OS. We support MacOS and ubuntu
-    import platform
-    print("Getting library for platform: ", platform.system())
-    if platform.system() == "Darwin":
-        # We are on MacOS
-        from mac_library import Resource
-        with Resource.load("libcheckers.so") as lib_file:
-            lib = ctypes.CDLL(os.path.join(dir_path, lib_file))
-            lib.B_getOptimalContinuationFromString.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
-            lib.B_getOptimalContinuationFromString.restype = ctypes.c_char_p
-            return lib
-    elif platform.system() == "Linux":
-        # We are on Ubuntu
-        from linux_library import Resource
-        with Resource.load("libcheckers.so", delete=True) as lib_file:
-            lib = ctypes.CDLL(os.path.join(dir_path, lib_file))
-            lib.B_getOptimalContinuationFromString.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
-            lib.B_getOptimalContinuationFromString.restype = ctypes.c_char_p
-            return lib
-    else:
-        raise RuntimeError("Unsupported system: " + platform.system())
+    with Resource.load("libcheckers.so", delete=True) as lib_file:
+        lib = ctypes.CDLL(os.path.join(dir_path, lib_file))
+        lib.B_getOptimalContinuationFromString.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_int, ctypes.c_int]
+        lib.B_getOptimalContinuationFromString.restype = ctypes.c_char_p
+        return lib
 
 def getBoardOptimalContinuation(board: SparseBoard, maxDepth: int, maxTime: float):
     _lib = with_lib()
